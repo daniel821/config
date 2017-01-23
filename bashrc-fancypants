@@ -1,0 +1,108 @@
+########################################################################
+# profile configuration
+###
+
+# settings and aliases
+#set -o vi
+#PATH=$PATH:$HOME/bin
+
+###
+# fancy pants bash prompt
+
+unset -f cd
+unset -f set_prompt
+unset -f PROMPT_COMMAND
+
+# imsnet servers: gsedn1 gsedv1 logsw1 ovmsn1 ovmsw1 ovmcn1 ovmcv1
+#ncdsn1 ncdsw1 wahms1 wwmmsn1
+# others: vusno238 vusno239 radexh
+
+# sets the static pieces of the prompt
+function set_prompt
+{
+    #config
+    local ps_black="\[\033[0;30m\]"
+    local ps_red="\[\033[0;31m\]"
+    local ps_green="\[\033[0;32m\]"
+    local ps_yellow="\[\033[0;33m\]"
+    local ps_blue="\[\033[0;34m\]"
+    local ps_purple="\[\033[0;35m\]"
+    local ps_cyan="\[\033[0;36m\]"
+    local ps_white="\[\033[0;37m\]"
+    local ps_bblack="\[\033[1;30m\]"
+    local ps_bred="\[\033[1;31m\]"
+    local ps_bgreen="\[\033[1;32m\]"
+    local ps_byellow="\[\033[1;33m\]"
+    local ps_bblue="\[\033[1;34m\]"
+    local ps_bpurple="\[\033[1;35m\]"
+    local ps_bcyan="\[\033[1;36m\]"
+    local ps_bwhite="\[\033[1;37m\]"
+
+    local termtitle=""
+    ps_barclr=$ps_purple
+    local ps_usrclr=$ps_white
+    ps_cwdclr=$ps_cyan
+    ps_clkclr=$ps_white
+
+    local ps_noclr="\[\033[0m\]"
+    local ps_r="\033(0"
+    local ps_s="\033(B"
+    local ps_h="q"
+
+    PS1pre="$ps_title$ps_barclr$ps_r$ps_h$ps_h$ps_s($ps_usrclr\u$ps_barclr)$ps_r$ps_h$ps_h$ps_s$ps_cwdclr "
+
+    PS1suf="$psbarclr$ps_r$ps_h$ps_h$ps_s($ps_clkclr\t$ps_barclr)$ps_r$ps_h$ps_h$ps_s\n$ps_noclr> "
+}
+
+# sets the piece of prompt that can change dynamicly
+function update_prompt
+{
+    local ps_padlen=0
+    local ps_pwd=""
+    local ps_trimlen=0
+    local ps_filler="qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+
+    # replacement for the \w prompt escape
+    local ps_cwd="${PWD/$HOME/~}"
+
+    if [ -d ".git" ]
+    then
+        local branch=$(git symbolic-ref -q HEAD)
+        local branch=${branch##refs/heads/}
+        local branch=" ${branch:-HEAD} "
+    else
+        local branch=""
+    fi
+    ps_branch="$ps_cwdclr$branch$ps_barclr"
+
+    # this string is used to work out how long the prompt is going to be
+    local ps_length="--($USER)---$ps_cwd $branch--(HH:MM:SS)--"
+
+    let ps_padlen=$COLUMNS-${#ps_length}
+
+    if [ "$ps_padlen" -gt "0" ]
+    then
+        # the prompt will be shorter than the term width, so fill it up with qq
+        ps_filler="${ps_filler:0:${ps_padlen}}"
+        ps_pwd="$ps_cwd $ps_barclr\033(0$ps_filler\033(B"
+    else
+        # the prompt is longer than the term, trim cwd and just show the end of it
+        let ps_trimlen=5-${ps_padlen}
+        ps_pwd="...${ps_cwd:${ps_trimlen}} $ps_barclr$ps_h$ps_h"
+    fi
+
+    # finally, set the prompt!
+    PS1="$PS1pre$ps_pwd$ps_branch$PS1suf"
+}
+
+# set PS1
+set_prompt
+
+# run the first update
+update_prompt
+
+# set_prompt is now no longer needed; can remove it
+unset -f set_prompt
+
+# run this every time prompt is shown
+PROMPT_COMMAND=update_prompt
